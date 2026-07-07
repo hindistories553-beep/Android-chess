@@ -22,14 +22,22 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
     
     - name: Create gradle wrapper directory
       run: mkdir -p gradle/wrapper
     
-    - name: Download gradle-wrapper.jar
+    - name: Download gradle-wrapper.jar with retry
       run: |
-        curl -L https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+        for i in 1 2 3; do
+          curl -L --fail https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar && break
+          echo "Retry $i failed, trying again..."
+          sleep 2
+        done
+        ls -la gradle/wrapper/
+        file gradle/wrapper/gradle-wrapper.jar
     
     - name: Create gradle-wrapper.properties
       run: |
@@ -38,6 +46,7 @@ jobs:
         echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
         echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
         echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        cat gradle/wrapper/gradle-wrapper.properties
     
     - name: Create gradlew
       run: |
@@ -76,7 +85,6 @@ jobs:
         ls -la gradle/wrapper/
         file gradle/wrapper/gradle-wrapper.jar
         ls -la gradlew
-        cat gradle/wrapper/gradle-wrapper.properties
     
     - name: Build APK with Gradle
       run: ./gradlew assembleDebug
